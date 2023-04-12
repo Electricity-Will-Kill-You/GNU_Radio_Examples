@@ -78,21 +78,25 @@ class cmajor(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.transition_width = transition_width = 100
+        self.transition_width = transition_width = 20
         self.samp_rate = samp_rate = 32000
-        self.cutoff = cutoff = 10e3
+        self.low_cutoff = low_cutoff = 300
+        self.high_cutoff = high_cutoff = 1.3e3
         self.Freq = Freq = 200
 
         ##################################################
         # Blocks
         ##################################################
 
-        self._transition_width_range = Range(1, 100, 1, 100, 200)
+        self._transition_width_range = Range(1, 15e3, 1, 20, 200)
         self._transition_width_win = RangeWidget(self._transition_width_range, self.set_transition_width, "transition_width", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._transition_width_win)
-        self._cutoff_range = Range(1e3, 15e3, 1, 10e3, 200)
-        self._cutoff_win = RangeWidget(self._cutoff_range, self.set_cutoff, "cutoff", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._cutoff_win)
+        self._low_cutoff_range = Range(100, 15e3, 1, 300, 200)
+        self._low_cutoff_win = RangeWidget(self._low_cutoff_range, self.set_low_cutoff, "low_cutoff", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._low_cutoff_win)
+        self._high_cutoff_range = Range(1, 15e3, 1, 1.3e3, 200)
+        self._high_cutoff_win = RangeWidget(self._high_cutoff_range, self.set_high_cutoff, "high_cutoff", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._high_cutoff_win)
         self.qtgui_time_sink_x_0 = qtgui.time_sink_f(
             1024, #size
             samp_rate, #samp_rate
@@ -227,17 +231,18 @@ class cmajor(gr.top_block, Qt.QWidget):
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.low_pass_filter_0 = filter.fir_filter_fff(
+        self.blocks_throttle_1 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
+        self.blocks_add_xx_1 = blocks.add_vff(1)
+        self.band_reject_filter_0 = filter.fir_filter_fff(
             1,
-            firdes.low_pass(
+            firdes.band_reject(
                 1,
                 samp_rate,
-                cutoff,
+                low_cutoff,
+                high_cutoff,
                 transition_width,
                 window.WIN_HAMMING,
                 6.76))
-        self.blocks_throttle_1 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
-        self.blocks_add_xx_1 = blocks.add_vff(1)
         self.audio_sink_0 = audio.sink(samp_rate, '', True)
         self.analog_sig_source_x_0_1 = analog.sig_source_f(samp_rate, analog.GR_COS_WAVE, 659.2, 0.1, 0, 0)
         self.analog_sig_source_x_0_0 = analog.sig_source_f(samp_rate, analog.GR_COS_WAVE, 1568, 0.1, 0, 0)
@@ -257,13 +262,13 @@ class cmajor(gr.top_block, Qt.QWidget):
         self.connect((self.analog_sig_source_x_0, 0), (self.blocks_add_xx_1, 0))
         self.connect((self.analog_sig_source_x_0_0, 0), (self.blocks_add_xx_1, 2))
         self.connect((self.analog_sig_source_x_0_1, 0), (self.blocks_add_xx_1, 1))
-        self.connect((self.blocks_add_xx_1, 0), (self.audio_sink_0, 0))
+        self.connect((self.band_reject_filter_0, 0), (self.audio_sink_0, 0))
+        self.connect((self.band_reject_filter_0, 0), (self.qtgui_freq_sink_x_0, 0))
+        self.connect((self.band_reject_filter_0, 0), (self.qtgui_freq_sink_x_1, 1))
+        self.connect((self.band_reject_filter_0, 0), (self.qtgui_time_sink_x_0, 0))
         self.connect((self.blocks_add_xx_1, 0), (self.blocks_throttle_1, 0))
         self.connect((self.blocks_add_xx_1, 0), (self.qtgui_freq_sink_x_1, 0))
-        self.connect((self.blocks_throttle_1, 0), (self.low_pass_filter_0, 0))
-        self.connect((self.low_pass_filter_0, 0), (self.qtgui_freq_sink_x_0, 0))
-        self.connect((self.low_pass_filter_0, 0), (self.qtgui_freq_sink_x_1, 1))
-        self.connect((self.low_pass_filter_0, 0), (self.qtgui_time_sink_x_0, 0))
+        self.connect((self.blocks_throttle_1, 0), (self.band_reject_filter_0, 0))
 
 
     def closeEvent(self, event):
@@ -279,7 +284,7 @@ class cmajor(gr.top_block, Qt.QWidget):
 
     def set_transition_width(self, transition_width):
         self.transition_width = transition_width
-        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, self.cutoff, self.transition_width, window.WIN_HAMMING, 6.76))
+        self.band_reject_filter_0.set_taps(firdes.band_reject(1, self.samp_rate, self.low_cutoff, self.high_cutoff, self.transition_width, window.WIN_HAMMING, 6.76))
 
     def get_samp_rate(self):
         return self.samp_rate
@@ -289,18 +294,25 @@ class cmajor(gr.top_block, Qt.QWidget):
         self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
         self.analog_sig_source_x_0_0.set_sampling_freq(self.samp_rate)
         self.analog_sig_source_x_0_1.set_sampling_freq(self.samp_rate)
+        self.band_reject_filter_0.set_taps(firdes.band_reject(1, self.samp_rate, self.low_cutoff, self.high_cutoff, self.transition_width, window.WIN_HAMMING, 6.76))
         self.blocks_throttle_1.set_sample_rate(self.samp_rate)
-        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, self.cutoff, self.transition_width, window.WIN_HAMMING, 6.76))
         self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
         self.qtgui_freq_sink_x_1.set_frequency_range(0, self.samp_rate)
         self.qtgui_time_sink_x_0.set_samp_rate(self.samp_rate)
 
-    def get_cutoff(self):
-        return self.cutoff
+    def get_low_cutoff(self):
+        return self.low_cutoff
 
-    def set_cutoff(self, cutoff):
-        self.cutoff = cutoff
-        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.samp_rate, self.cutoff, self.transition_width, window.WIN_HAMMING, 6.76))
+    def set_low_cutoff(self, low_cutoff):
+        self.low_cutoff = low_cutoff
+        self.band_reject_filter_0.set_taps(firdes.band_reject(1, self.samp_rate, self.low_cutoff, self.high_cutoff, self.transition_width, window.WIN_HAMMING, 6.76))
+
+    def get_high_cutoff(self):
+        return self.high_cutoff
+
+    def set_high_cutoff(self, high_cutoff):
+        self.high_cutoff = high_cutoff
+        self.band_reject_filter_0.set_taps(firdes.band_reject(1, self.samp_rate, self.low_cutoff, self.high_cutoff, self.transition_width, window.WIN_HAMMING, 6.76))
 
     def get_Freq(self):
         return self.Freq

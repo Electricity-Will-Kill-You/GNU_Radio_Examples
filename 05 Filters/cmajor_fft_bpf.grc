@@ -48,25 +48,46 @@ blocks:
     coordinate: [352, 28.0]
     rotation: 0
     state: true
-- name: cutoff
+- name: high_cutoff
   id: variable_qtgui_range
   parameters:
     comment: ''
     gui_hint: ''
-    label: cutoff
+    label: high_cutoff
     min_len: '200'
     orient: QtCore.Qt.Horizontal
     rangeType: float
-    start: 1e3
+    start: '1'
     step: '1'
     stop: 15e3
-    value: 10e3
+    value: 1.3e3
     widget: counter_slider
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [592, 48.0]
+    coordinate: [664, 16.0]
+    rotation: 0
+    state: true
+- name: low_cutoff
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: low_cutoff
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '100'
+    step: '1'
+    stop: 15e3
+    value: '300'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [512, 16.0]
     rotation: 0
     state: true
 - name: samp_rate
@@ -92,14 +113,14 @@ blocks:
     rangeType: float
     start: '1'
     step: '1'
-    stop: '100'
-    value: '100'
+    stop: 15e3
+    value: '20'
     widget: counter_slider
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [784, 40.0]
+    coordinate: [872, 24.0]
     rotation: 0
     state: true
 - name: analog_sig_source_x_0
@@ -182,7 +203,32 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [528, 248.0]
+    coordinate: [1064, 320.0]
+    rotation: 0
+    state: true
+- name: band_pass_filter_0
+  id: band_pass_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    beta: '6.76'
+    comment: ''
+    decim: '1'
+    gain: '1'
+    high_cutoff_freq: high_cutoff
+    interp: '1'
+    low_cutoff_freq: low_cutoff
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: samp_rate
+    type: fir_filter_fff
+    width: transition_width
+    win: window.WIN_HAMMING
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [768, 276.0]
     rotation: 0
     state: true
 - name: blocks_add_xx_1
@@ -220,30 +266,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [560, 368.0]
-    rotation: 0
-    state: true
-- name: low_pass_filter_0
-  id: low_pass_filter
-  parameters:
-    affinity: ''
-    alias: ''
-    beta: '6.76'
-    comment: ''
-    cutoff_freq: cutoff
-    decim: '1'
-    gain: '1'
-    interp: '1'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    samp_rate: samp_rate
-    type: fir_filter_fff
-    width: transition_width
-    win: window.WIN_HAMMING
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [768, 328.0]
     rotation: 0
     state: true
 - name: qtgui_freq_sink_x_0
@@ -324,7 +346,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1032, 444.0]
+    coordinate: [1032, 388.0]
     rotation: 0
     state: true
 - name: qtgui_freq_sink_x_1
@@ -405,7 +427,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [936, 612.0]
+    coordinate: [1008, 548.0]
     rotation: 0
     state: true
 - name: qtgui_time_sink_x_0
@@ -510,13 +532,13 @@ connections:
 - [analog_sig_source_x_0, '0', blocks_add_xx_1, '0']
 - [analog_sig_source_x_0_0, '0', blocks_add_xx_1, '2']
 - [analog_sig_source_x_0_1, '0', blocks_add_xx_1, '1']
-- [blocks_add_xx_1, '0', audio_sink_0, '0']
+- [band_pass_filter_0, '0', audio_sink_0, '0']
+- [band_pass_filter_0, '0', qtgui_freq_sink_x_0, '0']
+- [band_pass_filter_0, '0', qtgui_freq_sink_x_1, '1']
+- [band_pass_filter_0, '0', qtgui_time_sink_x_0, '0']
 - [blocks_add_xx_1, '0', blocks_throttle_1, '0']
 - [blocks_add_xx_1, '0', qtgui_freq_sink_x_1, '0']
-- [blocks_throttle_1, '0', low_pass_filter_0, '0']
-- [low_pass_filter_0, '0', qtgui_freq_sink_x_0, '0']
-- [low_pass_filter_0, '0', qtgui_freq_sink_x_1, '1']
-- [low_pass_filter_0, '0', qtgui_time_sink_x_0, '0']
+- [blocks_throttle_1, '0', band_pass_filter_0, '0']
 
 metadata:
   file_format: 1
