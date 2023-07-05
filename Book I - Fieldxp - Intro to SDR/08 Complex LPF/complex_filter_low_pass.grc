@@ -33,7 +33,7 @@ options:
     state: enabled
 
 blocks:
-- name: GHZ
+- name: KHZ
   id: variable
   parameters:
     comment: ''
@@ -105,7 +105,7 @@ blocks:
     alias: ''
     beta: '6.76'
     comment: ''
-    cutoff_freq: 2*GHZ
+    cutoff_freq: 2*KHZ
     decim: '1'
     gain: '1'
     interp: '1'
